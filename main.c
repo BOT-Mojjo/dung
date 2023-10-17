@@ -36,7 +36,6 @@ int p0w(int base, int exponent)
 
 void split_room(leaf *leaf, char depth)
 {
-    printf("depth %d\n", depth);
     if (depth >= TREE_DEPTH)
     {
         leaf->child_1 = NULL;
@@ -56,7 +55,7 @@ void split_room(leaf *leaf, char depth)
 
         leaf->child_1->key.x = leaf->key.x;
         leaf->child_1->key.y = leaf->key.y;
-        
+
         leaf->child_1->width = split_point;
         leaf->child_1->height = leaf->height;
         for (int i = 0; i < leaf->height; i++)
