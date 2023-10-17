@@ -34,10 +34,41 @@ int p0w(int base, int exponent)
     return result;
 }
 
+int r0nd(int min, int max)
+{
+    int rand_product = min;
+
+    rand_product += arc4random_uniform(max - min);
+
+    return rand_product;
+}
+
+void generate_room(leaf *leaf)
+{
+    unsigned char x_offset, y_offset, r_width, r_height;
+    float roomwidth = leaf->width/4;
+    float roomheight = leaf->height/4;
+    x_offset = r0nd(roomwidth/2, roomwidth*2);
+    r_width = r0nd(roomwidth*2, leaf->width-x_offset);
+    y_offset = r0nd(roomheight/2, roomheight*2);
+    r_height = r0nd(roomheight*2, leaf->height-y_offset);
+    x_offset += leaf->key.x;
+    y_offset += leaf->key.y;
+    // printf("%d, %d, %d, %d\n", x_offset, y_offset, r_width, r_height);
+    for (char i = 0; i < r_width; i++)
+    {
+        for (char ii = 0; ii < r_height; ii++)
+        {
+            dungeon[i + x_offset][ii + y_offset] = '.';
+        }
+    }
+}
+
 void split_room(leaf *leaf, char depth)
 {
     if (depth >= TREE_DEPTH)
     {
+        generate_room(leaf);
         leaf->child_1 = NULL;
         leaf->child_2 = NULL;
         return;
@@ -80,8 +111,26 @@ void split_room(leaf *leaf, char depth)
             dungeon[leaf->key.x + i][leaf->key.y + split_point] = '#' + depth;
         }
     }
+    // branchless variation of above code DOES NOT WORK
+    // char axis = leaf->width > leaf->height;
+    // leaf->child_2->key.x = leaf->key.x + (axis * split_point);
+    // leaf->child_2->key.y = leaf->key.y + (!axis * split_point);
+    // leaf->child_2->width = leaf->width - (axis * split_point);
+    // leaf->child_2->height = leaf->height - (!axis * split_point);
+
+    // leaf->child_1->key.x = leaf->key.x;
+    // leaf->child_1->key.y = leaf->key.y;
+
+    // leaf->child_1->width = (axis * split_point) + (!axis * leaf->width);
+    // leaf->child_1->height = (!axis *split_point) + (axis * leaf->height);
+    // for (int i = 0; i < *(&leaf->width + (!axis)); i++)
+    // {
+    //     dungeon[leaf->key.x + (i * axis) + (split_point * !axis)][leaf->key.y + (i * !axis) + (split_point * axis)] = '#' + depth;
+    // }
     split_room(leaf->child_1, depth + 1);
     split_room(leaf->child_2, depth + 1);
+
+
 }
 
 void dungeon_gen()
@@ -89,7 +138,7 @@ void dungeon_gen()
     leaf tree[p0w(2, TREE_DEPTH)];
     char leaf_pointer = 0;
     char depth_offset = 1;
-    // root preperations, remember to initialize your values kids!
+    // root preperations, remember to initialize your values, kids!
     tree[0].width = DUNGEON_SIZE;
     tree[0].height = DUNGEON_SIZE;
     tree[0].key.x = 0;
@@ -113,8 +162,6 @@ void dungeon_gen()
     // {
     //     printf("%p\n", &tree[i]);
     // }
-    depth_offset = 4;
-    char reminder = 0b0000;
     split_room(&tree[0], 0);
 }
 
