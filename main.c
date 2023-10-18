@@ -4,8 +4,10 @@
 
 #include "term_manip.c"
 
-#define DUNGEON_SIZE 100
+#define DUNGEON_SIZE 80
 #define TREE_DEPTH 5
+
+#define MAP_CHAR '#'
 
 char dungeon[DUNGEON_SIZE][DUNGEON_SIZE];
 
@@ -46,12 +48,16 @@ int r0nd(int min, int max)
 void generate_room(leaf *leaf)
 {
     unsigned char x_offset, y_offset, r_width, r_height;
-    float roomwidth = leaf->width/4;
-    float roomheight = leaf->height/4;
-    x_offset = r0nd(roomwidth/2, roomwidth*2);
-    r_width = r0nd(roomwidth*2, leaf->width-x_offset);
-    y_offset = r0nd(roomheight/2, roomheight*2);
-    r_height = r0nd(roomheight*2, leaf->height-y_offset);
+    float room_width = leaf->width / 4;
+    float room_height = leaf->height / 4;
+    x_offset = r0nd(room_width / 2, room_width * 1.5);
+    r_width = r0nd(room_width * 2, leaf->width - x_offset);
+    if (r_width <= 4)
+        r_width = 5;
+    y_offset = r0nd(room_height / 2, room_height * 1.5);
+    r_height = r0nd(room_height * 2, leaf->height - y_offset);
+    if (r_height <= 4)
+        r_height = 5;
     x_offset += leaf->key.x;
     y_offset += leaf->key.y;
     // printf("%d, %d, %d, %d\n", x_offset, y_offset, r_width, r_height);
@@ -59,7 +65,18 @@ void generate_room(leaf *leaf)
     {
         for (char ii = 0; ii < r_height; ii++)
         {
-            dungeon[i + x_offset][ii + y_offset] = '.';
+            dungeon[i + x_offset][ii + y_offset] = '*';
+        }
+    }
+
+    for (char x = 0; x < r_width; x++)
+    {
+        for (char y = 0; y < r_height; y++)
+        {
+            if (x == 0 || x == r_width - 1)
+                dungeon[x + x_offset][y + y_offset] = '-';
+            if (y == 0 || y == r_height - 1)
+                dungeon[x + x_offset][y + y_offset] = '|';
         }
     }
 }
@@ -76,9 +93,10 @@ void split_room(leaf *leaf, char depth)
     float split_line = arc4random_uniform(300); // 1/5 of 1000
     split_line += 350;
     split_line /= 1000;
-    unsigned char split_point = leaf->width * split_line;
+    unsigned char split_point;
     if (leaf->width > leaf->height)
     { // split the x-axis
+        split_point = leaf->width * split_line;
         leaf->child_2->key.x = leaf->key.x + split_point;
         leaf->child_2->key.y = leaf->key.y;
         leaf->child_2->width = leaf->width - split_point;
@@ -91,11 +109,12 @@ void split_room(leaf *leaf, char depth)
         leaf->child_1->height = leaf->height;
         for (int i = 0; i < leaf->height; i++)
         {
-            dungeon[leaf->key.x + split_point][leaf->key.y + i] = '#' + depth;
+            // dungeon[leaf->key.x + split_point][leaf->key.y + i] = '#' + depth;
         }
     }
     else
     { // split the y-axis
+        split_point = leaf->height * split_line;
         leaf->child_2->key.x = leaf->key.x;
         leaf->child_2->key.y = leaf->key.y + split_point;
         leaf->child_2->width = leaf->width;
@@ -108,29 +127,80 @@ void split_room(leaf *leaf, char depth)
         leaf->child_1->height = split_point;
         for (int i = 0; i < leaf->width; i++)
         {
-            dungeon[leaf->key.x + i][leaf->key.y + split_point] = '#' + depth;
+            // dungeon[leaf->key.x + i][leaf->key.y + split_point] = '#' + depth;
         }
     }
-    // branchless variation of above code DOES NOT WORK
-    // char axis = leaf->width > leaf->height;
-    // leaf->child_2->key.x = leaf->key.x + (axis * split_point);
-    // leaf->child_2->key.y = leaf->key.y + (!axis * split_point);
-    // leaf->child_2->width = leaf->width - (axis * split_point);
-    // leaf->child_2->height = leaf->height - (!axis * split_point);
-
-    // leaf->child_1->key.x = leaf->key.x;
-    // leaf->child_1->key.y = leaf->key.y;
-
-    // leaf->child_1->width = (axis * split_point) + (!axis * leaf->width);
-    // leaf->child_1->height = (!axis *split_point) + (axis * leaf->height);
-    // for (int i = 0; i < *(&leaf->width + (!axis)); i++)
-    // {
-    //     dungeon[leaf->key.x + (i * axis) + (split_point * !axis)][leaf->key.y + (i * !axis) + (split_point * axis)] = '#' + depth;
-    // }
     split_room(leaf->child_1, depth + 1);
     split_room(leaf->child_2, depth + 1);
 
+    int offset = 1;
+    char negative = 0, positive = 0;
+    if (leaf->width > leaf->height)
+    {
+        char height_offset = (leaf->height) / 2;
+        height_offset--;
+        dungeon[leaf->key.x + split_point][leaf->key.y + height_offset] = '#';
+        while (1)
+        {
+            if (!positive)
+            {
+                if (dungeon[leaf->key.x + (int)split_point + offset][leaf->key.y + height_offset] == ' ')
+                    dungeon[leaf->key.x + (int)split_point + offset][leaf->key.y + height_offset] = MAP_CHAR;
+                else
+                {
+                    dungeon[leaf->key.x + (int)split_point + offset][leaf->key.y + height_offset] = '+';
+                    positive = 1;
+                }
+            }
 
+            if (!negative)
+            {
+                if (dungeon[leaf->key.x + (int)split_point - offset][leaf->key.y + height_offset] == ' ')
+                    dungeon[leaf->key.x + (int)split_point - offset][leaf->key.y + height_offset] = MAP_CHAR;
+                else
+                {
+                    dungeon[leaf->key.x + (int)split_point - offset][leaf->key.y + height_offset] = '+';
+                    negative = 1;
+                }
+            }
+            if (positive && negative)
+                break;
+            offset++;
+        }
+    }
+    else
+    {
+        char width_offset = (leaf->width) / 2;
+        width_offset--;
+        dungeon[leaf->key.x + width_offset][leaf->key.y + split_point] = '#';
+        while (1)
+        {
+            if (!positive)
+            {
+                if (dungeon[leaf->key.x + width_offset][leaf->key.y + (int)split_point + offset] == ' ')
+                    dungeon[leaf->key.x + width_offset][leaf->key.y + (int)split_point + offset] = MAP_CHAR;
+                else
+                {
+                    dungeon[leaf->key.x + width_offset][leaf->key.y + (int)split_point + offset] = '+';
+                    positive = 1;
+                }
+            }
+
+            if (!negative)
+            {
+                if (dungeon[leaf->key.x + width_offset][leaf->key.y + (int)split_point - offset] == ' ')
+                    dungeon[leaf->key.x + width_offset][leaf->key.y + (int)split_point - offset] = MAP_CHAR;
+                else
+                {
+                    dungeon[leaf->key.x + width_offset][leaf->key.y + (int)split_point - offset] = '+';
+                    negative = 1;
+                }
+            }
+            if (positive && negative)
+                break;
+            offset++;
+        }
+    }
 }
 
 void dungeon_gen()
@@ -185,12 +255,22 @@ int main()
         for (int ii = 0; ii < DUNGEON_SIZE * 2; ii += 2)
         {
             // printf("%c%c", dungeon[i][ii/2], ' ');
-            dungeon_print[ii] = dungeon[i][ii / 2];
-            dungeon_print[ii + 1] = ' ';
+            switch (dungeon[i][ii / 2])
+            {
+            case ('-'):
+                dungeon_print[ii] = dungeon[i][ii / 2];
+                dungeon_print[ii + 1] = '-';
+                dungeon_print[ii - 1] = '-';
+                break;
+            default:
+                dungeon_print[ii] = dungeon[i][ii / 2];
+                dungeon_print[ii + 1] = ' ';
+            }
         }
 
         printf("%s%c", dungeon_print, '\n');
     }
+    printf("%s\n", "\u2550");
     return 0;
     char c;
 
