@@ -7,7 +7,7 @@
 #define DUNGEON_SIZE 80
 #define TREE_DEPTH 5
 
-#define MAP_CHAR '#'
+#define MAP_CHAR '.'
 
 char dungeon[DUNGEON_SIZE][DUNGEON_SIZE];
 
