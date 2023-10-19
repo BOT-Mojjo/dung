@@ -26,9 +26,7 @@ typedef struct leaf
 
 int p0w(int base, int exponent)
 {
-    if (exponent == 0)
-        return 1;
-    int result = base;
+    int result = 1;
     for (int i = 0; i < exponent; i++)
     {
         result *= base;
@@ -65,7 +63,7 @@ void generate_room(leaf *leaf)
     {
         for (char ii = 0; ii < r_height; ii++)
         {
-            dungeon[i + x_offset][ii + y_offset] = '*';
+            dungeon[i + x_offset][ii + y_offset] = '.';
         }
     }
 
@@ -139,7 +137,16 @@ void split_room(leaf *leaf, char depth)
     {
         char height_offset = (leaf->height) / 2;
         height_offset--;
-        dungeon[leaf->key.x + split_point][leaf->key.y + height_offset] = '#';
+        if (dungeon[leaf->key.x + split_point][leaf->key.y + height_offset] == '-')
+        {
+            dungeon[leaf->key.x + split_point][leaf->key.y + height_offset] = '+';
+            if (dungeon[leaf->key.x + split_point + 1][leaf->key.y + height_offset] == '*')
+                negative = 1;
+            else
+                positive = 1;
+        }
+        else
+            dungeon[leaf->key.x + split_point][leaf->key.y + height_offset] = '.';
         while (1)
         {
             if (!positive)
@@ -172,7 +179,16 @@ void split_room(leaf *leaf, char depth)
     {
         char width_offset = (leaf->width) / 2;
         width_offset--;
-        dungeon[leaf->key.x + width_offset][leaf->key.y + split_point] = '#';
+        if (dungeon[leaf->key.x + width_offset][leaf->key.y + split_point] == '|')
+        {
+            dungeon[leaf->key.x + width_offset][leaf->key.y + split_point] = '+';
+            if (dungeon[leaf->key.x + width_offset + 1][leaf->key.y + split_point] == '*')
+                negative = 1;
+            else
+                positive = 1;
+        }
+        else
+            dungeon[leaf->key.x + width_offset][leaf->key.y + split_point] = '.';
         while (1)
         {
             if (!positive)
@@ -205,7 +221,7 @@ void split_room(leaf *leaf, char depth)
 
 void dungeon_gen()
 {
-    leaf tree[p0w(2, TREE_DEPTH)];
+    leaf tree[p0w(2, TREE_DEPTH + 1)];
     char leaf_pointer = 0;
     char depth_offset = 1;
     // root preperations, remember to initialize your values, kids!
@@ -270,7 +286,7 @@ int main()
 
         printf("%s%c", dungeon_print, '\n');
     }
-    printf("%s\n", "\u2550");
+
     return 0;
     char c;
 
