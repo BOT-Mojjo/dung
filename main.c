@@ -8,7 +8,7 @@
 #define TREE_DEPTH 5
 
 #define MAP_CHAR '.'
-#define ROOM_CHAR '.'
+#define ROOM_CHAR '*'
 
 char dungeon[DUNGEON_SIZE][DUNGEON_SIZE];
 
@@ -22,6 +22,7 @@ typedef struct leaf
 {
     unsigned char width, height;
     char2 key;
+    unsigned short room_size;
     struct leaf *child_1, *child_2;
     // maybe just save the arr index instead? since you save it on the stack.
 } leaf;

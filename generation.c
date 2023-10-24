@@ -3,19 +3,22 @@
 void generate_room(leaf *leaf)
 {
     unsigned char x_offset, y_offset, r_width, r_height;
-    float room_width = leaf->width / 4;
-    float room_height = leaf->height / 4;
+    float room_width = leaf->width / 5;
+    float room_height = leaf->height / 5;
+    // offset of the room from leaf boudry
     x_offset = r0nd(room_width, room_width * 1.5);
-    r_width = r0nd(room_width * 2.5, leaf->width - x_offset);
-    if (r_width <= 4)
-        r_width = 5;
+    r_width = r0nd(room_width * 3, leaf->width - x_offset);
+    if (r_width <= 3)
+        r_width = 4;
     y_offset = r0nd(room_height, room_height * 1.5);
-    r_height = r0nd(room_height * 2, leaf->height - y_offset);
-    if (r_height <= 4)
-        r_height = 5;
+    r_height = r0nd(room_height * 3, leaf->height - y_offset);
+    if (r_height <= 3)
+        r_height = 4;
     x_offset += leaf->key.x;
     y_offset += leaf->key.y;
     // printf("%d, %d, %d, %d\n", x_offset, y_offset, r_width, r_height);
+    // fyller rummet med ROOM_CHAR
+    leaf->room_size = r_width * r_height;
     for (char i = 0; i < r_width; i++)
     {
         for (char ii = 0; ii < r_height; ii++)
@@ -23,23 +26,17 @@ void generate_room(leaf *leaf)
             dungeon[i + x_offset][ii + y_offset] = ROOM_CHAR;
         }
     }
-
+    // gör väggar runt rummet
     for (char x = 0; x < r_width; x++)
     {
         for (char y = 0; y < r_height; y++)
         {
-            if (y == 0 || y == r_height - 1)
-                dungeon[x + x_offset][y + y_offset] = '|';
             if (x == 0 || x == r_width - 1)
                 dungeon[x + x_offset][y + y_offset] = '-';
+            if (y == 0 || y == r_height - 1)
+                dungeon[x + x_offset][y + y_offset] = '|';
         }
     }
-    r_width--;
-    r_height--;
-    dungeon[x_offset][y_offset] = '0';
-    dungeon[x_offset + r_width][y_offset] = '0'+1;
-    dungeon[x_offset][y_offset + r_height] = '0'+2;
-    dungeon[x_offset + r_width][y_offset + r_height] = '0'+3;
 }
 
 void generate_corridor(leaf *leaf, char split_point)
@@ -73,8 +70,25 @@ void generate_corridor(leaf *leaf, char split_point)
                 if (dungeon[split_offset][height_offset] == ' ')
                     dungeon[split_offset][height_offset] = MAP_CHAR;
                 else
-                {
-                    dungeon[split_offset][height_offset] = '+';
+                { // Corner checks :)), god i wish i knew how to make this into a generic funktion
+                    if (dungeon[split_offset][height_offset + 1] == ' ')
+                    {
+                        dungeon[split_offset][height_offset] = '|';
+                        dungeon[split_offset - 1][height_offset] = ' ';
+                        dungeon[split_offset - 2][height_offset - 1] = MAP_CHAR;
+                        dungeon[split_offset - 1][height_offset - 1] = MAP_CHAR;
+                        dungeon[split_offset][height_offset - 1] = '+';
+                    }
+                    else if (dungeon[split_offset][height_offset - 1] == ' ')
+                    {
+                        dungeon[split_offset][height_offset] = '|';
+                        dungeon[split_offset - 1][height_offset] = ' ';
+                        dungeon[split_offset - 2][height_offset + 1] = MAP_CHAR;
+                        dungeon[split_offset - 1][height_offset + 1] = MAP_CHAR;
+                        dungeon[split_offset][height_offset + 1] = '+';
+                    }
+                    else
+                        dungeon[split_offset][height_offset] = '+';
                     positive = 1;
                 }
             }
@@ -86,7 +100,24 @@ void generate_corridor(leaf *leaf, char split_point)
                     dungeon[split_offset][height_offset] = MAP_CHAR;
                 else
                 {
-                    dungeon[split_offset][height_offset] = '+';
+                    if (dungeon[split_offset][height_offset + 1] == ' ')
+                    {
+                        dungeon[split_offset][height_offset] = '|';
+                        dungeon[split_offset + 1][height_offset] = ' ';
+                        dungeon[split_offset + 2][height_offset - 1] = MAP_CHAR;
+                        dungeon[split_offset + 1][height_offset - 1] = MAP_CHAR;
+                        dungeon[split_offset][height_offset - 1] = '+';
+                    }
+                    else if (dungeon[split_offset][height_offset - 1] == ' ')
+                    {
+                        dungeon[split_offset][height_offset] = '|';
+                        dungeon[split_offset + 1][height_offset] = ' ';
+                        dungeon[split_offset + 2][height_offset + 1] = MAP_CHAR;
+                        dungeon[split_offset + 1][height_offset + 1] = MAP_CHAR;
+                        dungeon[split_offset][height_offset + 1] = '+';
+                    }
+                    else
+                        dungeon[split_offset][height_offset] = '+';
                     negative = 1;
                 }
             }
@@ -103,10 +134,10 @@ void generate_corridor(leaf *leaf, char split_point)
         if (dungeon[width_offset][leaf->key.y + split_point] == '|')
         {
             dungeon[width_offset][leaf->key.y + split_point] = '+';
-            if (dungeon[width_offset + 1][leaf->key.y + split_point] == ROOM_CHAR)
-                negative = 1;
-            else
+            if (dungeon[width_offset][leaf->key.y + split_point + 1] == ROOM_CHAR)
                 positive = 1;
+            else
+                negative = 1;
         }
         else
             dungeon[width_offset][leaf->key.y + split_point] = '#';
@@ -114,23 +145,57 @@ void generate_corridor(leaf *leaf, char split_point)
         {
             if (!positive)
             {
-                if (dungeon[width_offset][leaf->key.y + (int)split_point + offset] == ' ')
-                    dungeon[width_offset][leaf->key.y + (int)split_point + offset] = MAP_CHAR;
+                char split_offset = leaf->key.y + split_point + offset;
+                if (dungeon[width_offset][split_offset] == ' ')
+                    dungeon[width_offset][split_offset] = MAP_CHAR;
                 else
                 {
-
-                    dungeon[width_offset][leaf->key.y + (int)split_point + offset] = '+';
+                    if (dungeon[width_offset + 1][split_offset] == ' ')
+                    {
+                        dungeon[width_offset][split_offset] = '|';
+                        dungeon[width_offset][split_offset - 1] = ' ';
+                        dungeon[width_offset - 1][split_offset - 2] = MAP_CHAR;
+                        dungeon[width_offset - 1][split_offset - 1] = MAP_CHAR;
+                        dungeon[width_offset - 1][split_offset] = '+';
+                    }
+                    else if (dungeon[width_offset - 1][split_offset] == ' ')
+                    {
+                        dungeon[width_offset][split_offset] = '|';
+                        dungeon[width_offset][split_offset - 1] = ' ';
+                        dungeon[width_offset + 1][split_offset - 2] = MAP_CHAR;
+                        dungeon[width_offset + 1][split_offset - 1] = MAP_CHAR;
+                        dungeon[width_offset + 1][split_offset] = '+';
+                    }
+                    else
+                        dungeon[width_offset][split_offset] = '+';
                     positive = 1;
                 }
             }
 
             if (!negative)
             {
-                if (dungeon[width_offset][leaf->key.y + (int)split_point - offset] == ' ')
-                    dungeon[width_offset][leaf->key.y + (int)split_point - offset] = MAP_CHAR;
+                char split_offset = leaf->key.y + split_point - offset;
+                if (dungeon[width_offset][split_offset] == ' ')
+                    dungeon[width_offset][split_offset] = MAP_CHAR;
                 else
                 {
-                    dungeon[width_offset][leaf->key.y + (int)split_point - offset] = '+';
+                    if (dungeon[width_offset + 1][split_offset] == ' ')
+                    {
+                        dungeon[width_offset][split_offset] = '|';
+                        dungeon[width_offset][split_offset + 1] = ' ';
+                        dungeon[width_offset - 1][split_offset + 2] = MAP_CHAR;
+                        dungeon[width_offset - 1][split_offset + 1] = MAP_CHAR;
+                        dungeon[width_offset - 1][split_offset] = '+';
+                    }
+                    else if (dungeon[width_offset - 1][split_offset] == ' ')
+                    {
+                        dungeon[width_offset][split_offset] = '|';
+                        dungeon[width_offset][split_offset + 1] = ' ';
+                        dungeon[width_offset + 1][split_offset + 2] = MAP_CHAR;
+                        dungeon[width_offset + 1][split_offset + 1] = MAP_CHAR;
+                        dungeon[width_offset + 1][split_offset] = '+';
+                    }
+                    dungeon[width_offset][split_offset] = '+';
                     negative = 1;
                 }
             }
@@ -143,7 +208,7 @@ void generate_corridor(leaf *leaf, char split_point)
 
 void split_room(leaf *leaf, char depth)
 {
-    if (depth >= TREE_DEPTH)
+    if (depth >= TREE_DEPTH || arc4random_uniform(20) + 1 < depth)
     {
         generate_room(leaf);
         leaf->child_1 = NULL;
