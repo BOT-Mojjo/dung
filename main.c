@@ -8,10 +8,9 @@
 #define TREE_DEPTH 5
 
 #define MAP_CHAR '.'
-#define ROOM_CHAR '*'
+#define ROOM_CHAR '.'
 
 char dungeon[DUNGEON_SIZE][DUNGEON_SIZE];
-
 
 typedef struct char2
 {
@@ -46,12 +45,10 @@ int r0nd(int min, int max)
     return rand_product;
 }
 
-
 #include "generation.c"
 
 int main()
 {
-    arc4random_uniform(8);
     for (int i = 0; i < DUNGEON_SIZE; i++)
     {
         for (int ii = 0; ii < DUNGEON_SIZE; ii++)
@@ -60,31 +57,46 @@ int main()
         }
     }
 
-    char dungeon_print[DUNGEON_SIZE * 2 + 1];
+    char dungeon_print[DUNGEON_SIZE * 2];
     dungeon_gen();
     set_raw_term();
-
+    char corner_checks = 0;
     for (int i = 0; i < DUNGEON_SIZE; i++)
     {
-        for (int ii = 0; ii < DUNGEON_SIZE * 2; ii += 2)
+        for (int ii = 0; ii < (DUNGEON_SIZE * 2) - 2; ii += 2)
         {
+            dungeon_print[ii] = dungeon[i][ii / 2];
             // printf("%c%c", dungeon[i][ii/2], ' ');
             switch (dungeon[i][ii / 2])
             {
+            case ('+'):
+                if ((dungeon[i][(ii / 2) - 1] == '-') || (dungeon[i][(ii / 2) + 1] == '-'))
+                {
+                    dungeon_print[ii + 1] = '-';
+                    dungeon_print[ii - 1] = '-';
+                }
+                break;
             case ('-'):
-                dungeon_print[ii] = dungeon[i][ii / 2];
                 dungeon_print[ii + 1] = '-';
                 dungeon_print[ii - 1] = '-';
                 break;
             default:
-                dungeon_print[ii] = dungeon[i][ii / 2];
-                dungeon_print[ii + 1] = ' ';
+                (ii + 1)[dungeon_print] = ' ';
             }
         }
 
         printf("%s%c", dungeon_print, '\n');
     }
-
+    for (int i = 0; i < DUNGEON_SIZE; i++)
+    {
+        for (int ii = 0; ii < DUNGEON_SIZE; ii++)
+        {
+            printf("%c", dungeon[i][ii]);
+        }
+        printf("%c", '\n');
+        
+    }
+    
     return 0;
     char c;
 
